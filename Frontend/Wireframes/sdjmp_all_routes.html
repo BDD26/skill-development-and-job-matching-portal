@@ -1,0 +1,328 @@
+
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; }
+  .wrap { padding: 12px 0; font-size: 13px; color: var(--color-text-primary); }
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 15px; font-weight: 500; margin-bottom: 10px; padding: 6px 12px; border-radius: var(--border-radius-md); }
+  .routes { display: flex; flex-direction: column; gap: 4px; }
+  .route { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; border-radius: 6px; transition: background 0.15s; cursor: default; }
+  .route:hover { background: var(--color-background-secondary); }
+  .method { font-size: 10px; font-weight: 500; padding: 2px 6px; border-radius: 4px; min-width: 42px; text-align: center; letter-spacing: 0.5px; }
+  .GET    { background: #E1F5EE; color: #0F6E56; }
+  .POST   { background: #E6F1FB; color: #185FA5; }
+  .PUT    { background: #FAEEDA; color: #854F0B; }
+  .PATCH  { background: #EEEDFE; color: #534AB7; }
+  .DELETE { background: #FCEBEB; color: #A32D2D; }
+  .path { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-primary); min-width: 300px; }
+  .desc { color: var(--color-text-secondary); font-size: 12px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--color-border-secondary); cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.15s; color: var(--color-text-secondary); }
+  .tab.active { background: var(--color-text-primary); color: var(--color-background-primary); border-color: var(--color-text-primary); }
+  .tag { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
+  .auth-guard { background: #FAEEDA; color: #854F0B; }
+  .admin-guard { background: #FCEBEB; color: #A32D2D; }
+  .employer-guard { background: #E6F1FB; color: #185FA5; }
+  .student-guard { background: #E1F5EE; color: #0F6E56; }
+  .group-label { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 10px 2px; }
+  @media (prefers-color-scheme: dark) {
+    .GET    { background: #085041; color: #9FE1CB; }
+    .POST   { background: #0C447C; color: #B5D4F4; }
+    .PUT    { background: #633806; color: #FAC775; }
+    .PATCH  { background: #3C3489; color: #CECBF6; }
+    .DELETE { background: #791F1F; color: #F7C1C1; }
+    .auth-guard { background: #633806; color: #FAC775; }
+    .admin-guard { background: #791F1F; color: #F7C1C1; }
+    .employer-guard { background: #0C447C; color: #B5D4F4; }
+    .student-guard { background: #085041; color: #9FE1CB; }
+  }
+</style>
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <div class="tab active" onclick="show('all')">All Routes</div>
+    <div class="tab" onclick="show('public')">Public</div>
+    <div class="tab" onclick="show('auth')">Auth</div>
+    <div class="tab" onclick="show('student')">Student</div>
+    <div class="tab" onclick="show('employer')">Employer</div>
+    <div class="tab" onclick="show('admin')">Admin</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const routes = {
+  public: {
+    label: "Public / Guest Routes",
+    color: "#F1EFE8",
+    darkColor: "#2C2C2A",
+    groups: [
+      {
+        name: "Frontend Pages",
+        items: [
+          { m:"GET", p:"/", d:"Home / landing page" },
+          { m:"GET", p:"/about", d:"About page" },
+          { m:"GET", p:"/jobs", d:"Public job browser" },
+          { m:"GET", p:"/jobs/:id", d:"Public job detail" },
+          { m:"GET", p:"/skills", d:"Public skills library" },
+          { m:"GET", p:"/register", d:"Registration page" },
+          { m:"GET", p:"/login", d:"Login page" },
+          { m:"GET", p:"/forgot-password", d:"Forgot password page" },
+          { m:"GET", p:"/reset-password/:token", d:"Reset password with token" },
+        ]
+      },
+      {
+        name: "API — Auth",
+        items: [
+          { m:"POST", p:"/api/auth/register", d:"Register new user (student/employer)" },
+          { m:"POST", p:"/api/auth/login", d:"Login, returns JWT" },
+          { m:"POST", p:"/api/auth/forgot-password", d:"Send simulated reset email" },
+          { m:"POST", p:"/api/auth/reset-password/:token", d:"Reset password using token" },
+          { m:"GET",  p:"/api/auth/me", d:"Get current logged-in user" },
+        ]
+      },
+      {
+        name: "API — Public Jobs & Skills",
+        items: [
+          { m:"GET", p:"/api/jobs", d:"List jobs (public, paginated, filterable)" },
+          { m:"GET", p:"/api/jobs/:id", d:"Get single job detail (public)" },
+          { m:"GET", p:"/api/skills", d:"List all skills (public catalog)" },
+          { m:"GET", p:"/api/skills/:id", d:"Get skill detail + learning tracks" },
+        ]
+      }
+    ]
+  },
+  auth: {
+    label: "Auth — Shared Authenticated",
+    color: "#FAEEDA",
+    darkColor: "#412402",
+    groups: [
+      {
+        name: "User (Any authenticated role)",
+        items: [
+          { m:"GET",   p:"/api/users/me", d:"Get own profile/role data" },
+          { m:"PATCH", p:"/api/users/me", d:"Update email, password, basic info" },
+          { m:"GET",   p:"/api/notifications", d:"Get in-app notifications" },
+          { m:"PATCH", p:"/api/notifications/:id/read", d:"Mark notification as read" },
+          { m:"PATCH", p:"/api/notifications/read-all", d:"Mark all notifications as read" },
+          { m:"DELETE",p:"/api/users/me", d:"Delete own account" },
+        ]
+      }
+    ]
+  },
+  student: {
+    label: "Student Routes",
+    color: "#E1F5EE",
+    darkColor: "#04342C",
+    groups: [
+      {
+        name: "Dashboard",
+        items: [
+          { m:"GET", p:"/dashboard", d:"Student dashboard page" },
+          { m:"GET", p:"/api/students/me/dashboard", d:"Dashboard summary (stats, suggestions, apps)" },
+        ]
+      },
+      {
+        name: "Profile",
+        items: [
+          { m:"GET",   p:"/profile", d:"Student profile page" },
+          { m:"GET",   p:"/api/students/me/profile", d:"Get own student profile" },
+          { m:"POST",  p:"/api/students/me/profile", d:"Create student profile (first time)" },
+          { m:"PATCH", p:"/api/students/me/profile", d:"Update profile (education, skills, prefs)" },
+          { m:"POST",  p:"/api/students/me/profile/skills", d:"Add skill to profile" },
+          { m:"PATCH", p:"/api/students/me/profile/skills/:skillId", d:"Update skill level/years" },
+          { m:"DELETE",p:"/api/students/me/profile/skills/:skillId", d:"Remove skill from profile" },
+          { m:"POST",  p:"/api/students/me/profile/projects", d:"Add project" },
+          { m:"PATCH", p:"/api/students/me/profile/projects/:projId", d:"Edit project" },
+          { m:"DELETE",p:"/api/students/me/profile/projects/:projId", d:"Remove project" },
+          { m:"POST",  p:"/api/students/me/profile/certifications", d:"Add certification" },
+          { m:"PATCH", p:"/api/students/me/profile/certifications/:certId", d:"Edit certification" },
+          { m:"DELETE",p:"/api/students/me/profile/certifications/:certId", d:"Remove certification" },
+          { m:"PATCH", p:"/api/students/me/profile/visibility", d:"Toggle profile/resume visibility" },
+        ]
+      },
+      {
+        name: "Resumes",
+        items: [
+          { m:"GET",   p:"/resumes", d:"Resumes page" },
+          { m:"GET",   p:"/api/students/me/resumes", d:"Get all resume versions" },
+          { m:"POST",  p:"/api/students/me/resumes", d:"Create new resume (builder or PDF upload)" },
+          { m:"GET",   p:"/api/students/me/resumes/:resumeId", d:"Get single resume" },
+          { m:"PATCH", p:"/api/students/me/resumes/:resumeId", d:"Edit resume (structured builder)" },
+          { m:"DELETE",p:"/api/students/me/resumes/:resumeId", d:"Delete resume version" },
+          { m:"PATCH", p:"/api/students/me/resumes/:resumeId/set-default", d:"Set as default resume" },
+        ]
+      },
+      {
+        name: "Skills & Assessments",
+        items: [
+          { m:"GET",  p:"/skills-assessments", d:"Skills & assessments page" },
+          { m:"GET",  p:"/api/assessments", d:"List all available assessments" },
+          { m:"GET",  p:"/api/assessments/:id", d:"Get assessment questions" },
+          { m:"POST", p:"/api/assessments/:id/attempt", d:"Submit assessment attempt, get score + badge" },
+          { m:"GET",  p:"/api/students/me/attempts", d:"Get all past assessment attempts" },
+          { m:"GET",  p:"/api/students/me/attempts/:attemptId", d:"Get attempt detail + feedback" },
+          { m:"GET",  p:"/api/students/me/badges", d:"Get earned badges (badge gallery)" },
+        ]
+      },
+      {
+        name: "Job Search & Applications",
+        items: [
+          { m:"GET",  p:"/job-search", d:"Job search page" },
+          { m:"GET",  p:"/applications", d:"My applications page" },
+          { m:"GET",  p:"/api/jobs/recommendations", d:"Get personalized job recommendations" },
+          { m:"GET",  p:"/api/skills/recommendations", d:"Get recommended skills to close gaps" },
+          { m:"GET",  p:"/api/jobs/:id/match-score", d:"Get match score for a specific job" },
+          { m:"POST", p:"/api/applications", d:"Apply to a job with chosen resume" },
+          { m:"GET",  p:"/api/applications/me", d:"Get all my applications + statuses" },
+          { m:"GET",  p:"/api/applications/:id", d:"Get single application detail" },
+          { m:"DELETE",p:"/api/applications/:id", d:"Withdraw application (if not shortlisted)" },
+        ]
+      }
+    ]
+  },
+  employer: {
+    label: "Employer Routes",
+    color: "#E6F1FB",
+    darkColor: "#042C53",
+    groups: [
+      {
+        name: "Company & Dashboard",
+        items: [
+          { m:"GET",   p:"/employer/dashboard", d:"Employer dashboard page" },
+          { m:"GET",   p:"/employer/profile", d:"Company profile page" },
+          { m:"GET",   p:"/api/employers/me", d:"Get own employer profile" },
+          { m:"POST",  p:"/api/employers/me", d:"Create employer profile (first time)" },
+          { m:"PATCH", p:"/api/employers/me", d:"Update company profile" },
+        ]
+      },
+      {
+        name: "Job Management",
+        items: [
+          { m:"GET",   p:"/employer/jobs", d:"My jobs list page" },
+          { m:"GET",   p:"/employer/jobs/new", d:"Create new job page" },
+          { m:"GET",   p:"/employer/jobs/:id/edit", d:"Edit job page" },
+          { m:"GET",   p:"/api/employers/me/jobs", d:"Get all jobs posted by employer" },
+          { m:"POST",  p:"/api/jobs", d:"Create new job posting" },
+          { m:"GET",   p:"/api/jobs/:id", d:"Get job detail (employer view)" },
+          { m:"PUT",   p:"/api/jobs/:id", d:"Update job posting" },
+          { m:"PATCH", p:"/api/jobs/:id/status", d:"Open / close / archive job" },
+          { m:"DELETE",p:"/api/jobs/:id", d:"Delete job posting" },
+        ]
+      },
+      {
+        name: "ATS — Applicants",
+        items: [
+          { m:"GET",   p:"/employer/jobs/:id/applicants", d:"Applicants list (ATS) page" },
+          { m:"GET",   p:"/api/jobs/:id/applications", d:"Get applicants for a job (with match scores)" },
+          { m:"PATCH", p:"/api/applications/:id/status", d:"Shortlist or reject applicant" },
+          { m:"POST",  p:"/api/applications/:id/notes", d:"Add private note to applicant" },
+          { m:"PATCH", p:"/api/applications/:id/notes/:noteId", d:"Edit note" },
+          { m:"DELETE",p:"/api/applications/:id/notes/:noteId", d:"Delete note" },
+          { m:"GET",   p:"/api/applications/:id/resume", d:"View applicant resume (verified only)" },
+          { m:"GET",   p:"/api/jobs/:id/applications/export", d:"Export applicants CSV (per job)" },
+        ]
+      },
+      {
+        name: "Simulated Interviews",
+        items: [
+          { m:"GET",   p:"/employer/interviews", d:"Interviews page" },
+          { m:"GET",   p:"/api/interviews", d:"Get all scheduled interviews" },
+          { m:"POST",  p:"/api/interviews", d:"Schedule simulated interview" },
+          { m:"PATCH", p:"/api/interviews/:id", d:"Reschedule / update interview" },
+          { m:"DELETE",p:"/api/interviews/:id", d:"Cancel interview" },
+        ]
+      }
+    ]
+  },
+  admin: {
+    label: "Placement / Admin Routes",
+    color: "#FCEBEB",
+    darkColor: "#501313",
+    groups: [
+      {
+        name: "Dashboard & Approvals",
+        items: [
+          { m:"GET",   p:"/admin/dashboard", d:"Admin analytics dashboard page" },
+          { m:"GET",   p:"/admin/approvals", d:"Approvals queue page" },
+          { m:"GET",   p:"/api/admin/analytics", d:"Dashboard metrics (apps, offers, skills)" },
+          { m:"GET",   p:"/api/admin/employers/pending", d:"List employers awaiting approval" },
+          { m:"PATCH", p:"/api/admin/employers/:id/verify", d:"Approve employer" },
+          { m:"PATCH", p:"/api/admin/employers/:id/reject", d:"Reject employer" },
+          { m:"PATCH", p:"/api/admin/employers/:id/suspend", d:"Suspend employer account" },
+          { m:"GET",   p:"/api/admin/jobs/pending", d:"List jobs awaiting moderation" },
+          { m:"PATCH", p:"/api/admin/jobs/:id/approve", d:"Approve job posting" },
+          { m:"PATCH", p:"/api/admin/jobs/:id/reject", d:"Reject job posting" },
+        ]
+      },
+      {
+        name: "Analytics & Exports",
+        items: [
+          { m:"GET",   p:"/admin/analytics", d:"Analytics page" },
+          { m:"GET",   p:"/admin/exports", d:"Exports page" },
+          { m:"GET",   p:"/api/admin/analytics/applications", d:"Application volume over time" },
+          { m:"GET",   p:"/api/admin/analytics/offers", d:"Offer rate & placement rate" },
+          { m:"GET",   p:"/api/admin/analytics/skills", d:"Top skills in demand" },
+          { m:"GET",   p:"/api/admin/analytics/job-types", d:"Full-time vs internship breakdown" },
+          { m:"GET",   p:"/api/admin/exports/applications", d:"Export applications CSV (date range)" },
+          { m:"GET",   p:"/api/admin/exports/offers", d:"Export offers/placements CSV" },
+        ]
+      },
+      {
+        name: "Skills Taxonomy & Content",
+        items: [
+          { m:"GET",   p:"/admin/skills-taxonomy", d:"Skills taxonomy page" },
+          { m:"GET",   p:"/admin/content-manager", d:"Content manager page" },
+          { m:"POST",  p:"/api/admin/skills", d:"Add new skill to taxonomy" },
+          { m:"PATCH", p:"/api/admin/skills/:id", d:"Edit skill name/tags/aliases" },
+          { m:"DELETE",p:"/api/admin/skills/:id", d:"Remove skill" },
+          { m:"POST",  p:"/api/admin/assessments", d:"Create assessment + questions" },
+          { m:"PATCH", p:"/api/admin/assessments/:id", d:"Edit assessment" },
+          { m:"DELETE",p:"/api/admin/assessments/:id", d:"Delete assessment" },
+          { m:"POST",  p:"/api/admin/content", d:"Create FAQ / skill guide / policy" },
+          { m:"PATCH", p:"/api/admin/content/:id", d:"Edit content item" },
+          { m:"DELETE",p:"/api/admin/content/:id", d:"Delete content item" },
+        ]
+      },
+      {
+        name: "User & System Management",
+        items: [
+          { m:"GET",   p:"/admin/settings", d:"Settings page" },
+          { m:"GET",   p:"/api/admin/users", d:"List all users (super_admin)" },
+          { m:"PATCH", p:"/api/admin/users/:id/role", d:"Change user role (super_admin)" },
+          { m:"DELETE",p:"/api/admin/users/:id", d:"Delete user account (super_admin)" },
+          { m:"GET",   p:"/api/admin/students", d:"List all students with profiles" },
+          { m:"PATCH", p:"/api/admin/settings", d:"Update site branding / contact info" },
+        ]
+      }
+    ]
+  }
+};
+
+function show(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const content = document.getElementById('content');
+  const toShow = tab === 'all' ? Object.values(routes) : [routes[tab]];
+
+  content.innerHTML = toShow.map(section => `
+    <div class="section">
+      <div class="section-title" style="border-left: 3px solid var(--color-text-secondary); padding-left: 10px; color: var(--color-text-secondary);">${section.label}</div>
+      ${section.groups.map(g => `
+        <div class="group-label">${g.name}</div>
+        <div class="routes">
+          ${g.items.map(r => `
+            <div class="route">
+              <span class="method ${r.m}">${r.m}</span>
+              <span class="path">${r.p}</span>
+              <span class="desc">${r.d}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+show('all');
+</script>
